@@ -8,8 +8,10 @@ const databaseUrl = process.env.NEXT_PUBLIC_DATABASE_URL || process.env.DATABASE
  * Neon SQL client for serverless environments.
  * Uses HTTP for communication, making it ideal for browser-based apps.
  */
-export const sql = databaseUrl && !databaseUrl.includes('your_neon_connection_string') 
-  ? neon(databaseUrl) 
-  : null;
+export const sql = databaseUrl ? neon(databaseUrl) : null;
 
-export const isDbConnected = !!sql;
+/**
+ * Helper to determine if a database connection is configured.
+ * We consider it connected if the SQL client is initialized and the URL is not empty.
+ */
+export const isDbConnected = !!sql && databaseUrl !== '';

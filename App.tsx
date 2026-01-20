@@ -21,7 +21,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { Student, Teacher, Agenda } from './types';
-import { sql, isDbConnected } from './services/db';
+import { supabase, isSupabaseConnected } from './services/supabaseClient';
 
 // Mock Data for fallback
 const mockStudents: Student[] = [
@@ -57,8 +57,8 @@ const App: React.FC = () => {
       setIsLoading(true);
       setDbError(null);
 
-      if (!isDbConnected || !sql) {
-        console.warn("Neon DATABASE_URL is not configured. Using mock data.");
+      if (!isSupabaseConnected || !supabase) {
+        console.warn("Supabase credentials not configured. Using mock data.");
         setStudents(mockStudents);
         setTeachers(mockTeachers);
         setAgendas(mockAgendas);
@@ -67,19 +67,23 @@ const App: React.FC = () => {
       }
 
       try {
-        // Fetch all data in parallel from Neon
+        // Fetch all data in parallel from Supabase
         const [studentsRes, teachersRes, agendasRes] = await Promise.all([
-          sql`SELECT * FROM students ORDER BY created_at DESC`,
-          sql`SELECT * FROM teachers ORDER BY full_name ASC`,
-          sql`SELECT * FROM agendas ORDER BY event_date ASC`
+          supabase.from('students').select('*').order('created_at', { ascending: false }),
+          supabase.from('teachers').select('*').order('full_name', { ascending: true }),
+          supabase.from('agendas').select('*').order('event_date', { ascending: true })
         ]);
         
-        setStudents(studentsRes as unknown as Student[]);
-        setTeachers(teachersRes as unknown as Teacher[]);
-        setAgendas(agendasRes as unknown as Agenda[]);
+        if (studentsRes.error) throw studentsRes.error;
+        if (teachersRes.error) throw teachersRes.error;
+        if (agendasRes.error) throw agendasRes.error;
+
+        setStudents(studentsRes.data as Student[]);
+        setTeachers(teachersRes.data as Teacher[]);
+        setAgendas(agendasRes.data as Agenda[]);
       } catch (error: any) {
-        console.error("Database connection failed:", error);
-        setDbError(error.message || "Failed to connect to Neon DB");
+        console.error("Supabase connection failed:", error);
+        setDbError(error.message || "Failed to connect to Supabase");
         // Fallback to mocks
         setStudents(mockStudents);
         setTeachers(mockTeachers);
@@ -98,10 +102,10 @@ const App: React.FC = () => {
         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{title}</h2>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-slate-500 text-sm">{subtitle}</p>
-          {isDbConnected ? (
+          {isSupabaseConnected ? (
             <span className="flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-tighter">
               <Database size={10} />
-              Neon Live
+              Supabase Live
             </span>
           ) : (
             <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 uppercase tracking-tighter">
@@ -153,15 +157,15 @@ const App: React.FC = () => {
             ) : (
               <>
                 <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDbConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isSupabaseConnected ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     <CheckCircle2 size={20} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-bold text-slate-800">
-                      {isDbConnected ? 'Sinkronisasi Neon DB Aktif' : 'Menjalankan Mode Simulasi'}
+                      {isSupabaseConnected ? 'Sinkronisasi Supabase Aktif' : 'Menjalankan Mode Simulasi'}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {isDbConnected ? 'Koneksi database berhasil dilakukan melalui serverless HTTP driver.' : 'Silakan isi DATABASE_URL di .env.local untuk menghubungkan ke Neon.'}
+                      {isSupabaseConnected ? 'Koneksi database berhasil dilakukan melalui Supabase client.' : 'Silakan isi VITE_SUPABASE_URL di .env.local untuk menghubungkan ke Supabase.'}
                     </p>
                   </div>
                   <div className="text-right">

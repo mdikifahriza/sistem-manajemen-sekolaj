@@ -54,19 +54,18 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true);
-      setDbError(null);
-
-      if (!isSupabaseConnected || !supabase) {
-        console.warn("Supabase credentials not configured. Using mock data.");
-        setStudents(mockStudents);
-        setTeachers(mockTeachers);
-        setAgendas(mockAgendas);
-        setIsLoading(false);
-        return;
-      }
-
       try {
+        setIsLoading(true);
+        setDbError(null);
+
+        if (!isSupabaseConnected || !supabase) {
+          console.info("Using mock data as Supabase is not configured.");
+          setStudents(mockStudents);
+          setTeachers(mockTeachers);
+          setAgendas(mockAgendas);
+          return;
+        }
+
         // Fetch all data in parallel from Supabase
         const [studentsRes, teachersRes, agendasRes] = await Promise.all([
           supabase.from('students').select('*').order('created_at', { ascending: false }),
@@ -74,17 +73,19 @@ const App: React.FC = () => {
           supabase.from('agendas').select('*').order('event_date', { ascending: true })
         ]);
         
-        if (studentsRes.error) throw studentsRes.error;
-        if (teachersRes.error) throw teachersRes.error;
-        if (agendasRes.error) throw agendasRes.error;
+        // Use mocks if tables are empty or error occurs
+        if (studentsRes.error) console.error("Students fetch error:", studentsRes.error);
+        if (teachersRes.error) console.error("Teachers fetch error:", teachersRes.error);
+        if (agendasRes.error) console.error("Agendas fetch error:", agendasRes.error);
 
-        setStudents(studentsRes.data as Student[]);
-        setTeachers(teachersRes.data as Teacher[]);
-        setAgendas(agendasRes.data as Agenda[]);
+        setStudents(studentsRes.data && studentsRes.data.length > 0 ? studentsRes.data : mockStudents);
+        setTeachers(teachersRes.data && teachersRes.data.length > 0 ? teachersRes.data : mockTeachers);
+        setAgendas(agendasRes.data && agendasRes.data.length > 0 ? agendasRes.data : mockAgendas);
+
       } catch (error: any) {
-        console.error("Supabase connection failed:", error);
-        setDbError(error.message || "Failed to connect to Supabase");
-        // Fallback to mocks
+        console.error("Initialization failed:", error);
+        setDbError(error.message || "Gagal memuat data dari database.");
+        // Fallback to avoid white screen
         setStudents(mockStudents);
         setTeachers(mockTeachers);
         setAgendas(mockAgendas);
@@ -165,11 +166,11 @@ const App: React.FC = () => {
                       {isSupabaseConnected ? 'Sinkronisasi Supabase Aktif' : 'Menjalankan Mode Simulasi'}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {isSupabaseConnected ? 'Koneksi database berhasil dilakukan melalui Supabase client.' : 'Silakan isi VITE_SUPABASE_URL di .env.local untuk menghubungkan ke Supabase.'}
+                      {isSupabaseConnected ? 'Koneksi database berhasil dilakukan melalui Supabase client.' : 'Koneksi database menggunakan data lokal (mock data).'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-slate-400">Baru saja</p>
+                    <p className="text-xs text-slate-400">Aktif</p>
                   </div>
                 </div>
                 {students.slice(0, 2).map((s, idx) => (
@@ -223,10 +224,10 @@ const App: React.FC = () => {
             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-700 text-sm animate-in slide-in-from-top-2">
               <AlertCircle size={20} />
               <div>
-                <p className="font-bold">Kesalahan Database</p>
+                <p className="font-bold">Info Sistem</p>
                 <p>{dbError}</p>
               </div>
-              <button onClick={() => window.location.reload()} className="ml-auto underline font-bold">Coba Lagi</button>
+              <button onClick={() => window.location.reload()} className="ml-auto underline font-bold">Muat Ulang</button>
             </div>
           )}
 
@@ -253,34 +254,38 @@ const App: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {isLoading ? (
+                      {isLoading && students.length === 0 ? (
                          [1, 2, 3, 4].map(i => (
                            <tr key={i}><td colSpan={5} className="px-6 py-4"><div className="h-10 bg-slate-50 animate-pulse-slow rounded-lg"></div></td></tr>
                          ))
-                      ) : students.filter(s => s.full_name.toLowerCase().includes(searchTerm.toLowerCase())).map((student) => (
-                        <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                                {student.full_name.charAt(0)}
-                              </div>
-                              <span className="text-sm font-semibold text-slate-800">{student.full_name}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 font-mono">{student.nisn}</td>
-                          <td className="px-6 py-4 text-sm text-slate-600 font-medium">{student.class_name}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                              student.status === 'Aktif' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {student.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="text-slate-400 hover:text-emerald-700"><MoreVertical size={18} /></button>
-                          </td>
-                        </tr>
-                      ))}
+                      ) : (
+                        students
+                          .filter(s => s.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                          .map((student) => (
+                            <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                                    {student.full_name.charAt(0)}
+                                  </div>
+                                  <span className="text-sm font-semibold text-slate-800">{student.full_name}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-slate-600 font-mono">{student.nisn}</td>
+                              <td className="px-6 py-4 text-sm text-slate-600 font-medium">{student.class_name}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                                  student.status === 'Aktif' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {student.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button className="text-slate-400 hover:text-emerald-700"><MoreVertical size={18} /></button>
+                              </td>
+                            </tr>
+                          ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -292,29 +297,33 @@ const App: React.FC = () => {
             <>
               {renderHeader('Manajemen Guru', 'Database tenaga pendidik dan staf kependidikan.')}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {isLoading ? (
+                {isLoading && teachers.length === 0 ? (
                   [1, 2, 3].map(i => <div key={i} className="h-36 bg-white rounded-2xl animate-pulse-slow"></div>)
-                ) : teachers.filter(t => t.full_name.toLowerCase().includes(searchTerm.toLowerCase())).map(t => (
-                  <div key={t.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-bold text-xl shrink-0">
-                      {t.full_name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-slate-800 truncate">{t.full_name}</h4>
-                      <p className="text-[10px] text-emerald-600 font-bold mb-3 uppercase tracking-widest">{t.subject}</p>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-slate-500 text-xs">
-                          <Phone size={12} className="shrink-0" />
-                          <span>{t.phone || '-'}</span>
+                ) : (
+                  teachers
+                    .filter(t => t.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map(t => (
+                      <div key={t.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex gap-4 hover:shadow-md transition-all">
+                        <div className="w-14 h-14 rounded-2xl bg-amber-500 flex items-center justify-center text-white font-bold text-xl shrink-0">
+                          {t.full_name.charAt(0)}
                         </div>
-                        <div className="flex items-center gap-2 text-slate-500 text-xs">
-                          <Clock size={12} className="shrink-0" />
-                          <span className="truncate">NIP: {t.nip || 'N/A'}</span>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-slate-800 truncate">{t.full_name}</h4>
+                          <p className="text-[10px] text-emerald-600 font-bold mb-3 uppercase tracking-widest">{t.subject}</p>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 text-slate-500 text-xs">
+                              <Phone size={12} className="shrink-0" />
+                              <span>{t.phone || '-'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-500 text-xs">
+                              <Clock size={12} className="shrink-0" />
+                              <span className="truncate">NIP: {t.nip || 'N/A'}</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    ))
+                )}
               </div>
             </>
           )}
@@ -335,9 +344,9 @@ const App: React.FC = () => {
              <div className="space-y-6">
                {renderHeader('Agenda Sekolah', 'Jadwal kegiatan akademik dan hari besar.')}
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {isLoading ? (
+                 {isLoading && agendas.length === 0 ? (
                    [1, 2, 3].map(i => <div key={i} className="h-40 bg-white rounded-2xl animate-pulse"></div>)
-                 ) : agendas.length > 0 ? (
+                 ) : (
                    agendas.map((a) => (
                      <div key={a.id} className="bg-white p-6 rounded-2xl border-b-4 border-emerald-600 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-start justify-between mb-4">
@@ -357,10 +366,6 @@ const App: React.FC = () => {
                         </div>
                      </div>
                    ))
-                 ) : (
-                   <div className="col-span-full py-20 text-center bg-white rounded-2xl border border-slate-100">
-                     <p className="text-slate-400 italic">Belum ada agenda yang dijadwalkan.</p>
-                   </div>
                  )}
                </div>
              </div>

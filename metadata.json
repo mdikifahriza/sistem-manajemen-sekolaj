@@ -1,0 +1,7 @@
+{
+  "name": "Copy of SIM MI Miftahul Huda 02 Papungan",
+  "description": "Sistem Informasi Manajemen terpadu untuk MI Miftahul Huda 02 Papungan, mencakup manajemen siswa, guru, raport akademik, dan agenda sekolah dengan integrasi Supabase.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

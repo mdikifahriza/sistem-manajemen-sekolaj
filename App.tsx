@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
@@ -11,10 +10,8 @@ import {
   Plus, 
   MapPin,
   Phone,
-  Mail,
   MoreVertical,
   CheckCircle2,
-  Clock,
   BookOpen,
   AlertCircle,
   Database,
@@ -63,6 +60,7 @@ const App: React.FC = () => {
           setStudents(mockStudents);
           setTeachers(mockTeachers);
           setAgendas(mockAgendas);
+          setIsLoading(false);
           return;
         }
 
@@ -153,7 +151,7 @@ const App: React.FC = () => {
           <div className="space-y-4">
             {isLoading ? (
               [1, 2, 3].map(i => (
-                <div key={i} className="h-16 bg-slate-50 animate-pulse-slow rounded-xl"></div>
+                <div key={i} className="h-16 bg-slate-50 animate-pulse rounded-xl"></div>
               ))
             ) : (
               <>
@@ -218,10 +216,10 @@ const App: React.FC = () => {
     <div className="min-h-screen flex bg-slate-50 selection:bg-emerald-100 selection:text-emerald-900">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <main className="flex-1 ml-72 p-10 overflow-y-auto h-screen">
+      <main className="flex-1 ml-0 md:ml-72 p-6 md:p-10 overflow-y-auto min-h-screen">
         <div className="max-w-7xl mx-auto">
           {dbError && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-700 text-sm animate-in slide-in-from-top-2">
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-700 text-sm">
               <AlertCircle size={20} />
               <div>
                 <p className="font-bold">Info Sistem</p>
@@ -256,7 +254,7 @@ const App: React.FC = () => {
                     <tbody className="divide-y divide-slate-100">
                       {isLoading && students.length === 0 ? (
                          [1, 2, 3, 4].map(i => (
-                           <tr key={i}><td colSpan={5} className="px-6 py-4"><div className="h-10 bg-slate-50 animate-pulse-slow rounded-lg"></div></td></tr>
+                           <tr key={i}><td colSpan={5} className="px-6 py-4"><div className="h-10 bg-slate-50 animate-pulse rounded-lg"></div></td></tr>
                          ))
                       ) : (
                         students
@@ -298,7 +296,7 @@ const App: React.FC = () => {
               {renderHeader('Manajemen Guru', 'Database tenaga pendidik dan staf kependidikan.')}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {isLoading && teachers.length === 0 ? (
-                  [1, 2, 3].map(i => <div key={i} className="h-36 bg-white rounded-2xl animate-pulse-slow"></div>)
+                  [1, 2, 3].map(i => <div key={i} className="h-36 bg-white rounded-2xl animate-pulse"></div>)
                 ) : (
                   teachers
                     .filter(t => t.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -314,10 +312,6 @@ const App: React.FC = () => {
                             <div className="flex items-center gap-2 text-slate-500 text-xs">
                               <Phone size={12} className="shrink-0" />
                               <span>{t.phone || '-'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-slate-500 text-xs">
-                              <Clock size={12} className="shrink-0" />
-                              <span className="truncate">NIP: {t.nip || 'N/A'}</span>
                             </div>
                           </div>
                         </div>
